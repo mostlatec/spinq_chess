@@ -39,6 +39,10 @@
   #status { margin-top: 16px; padding: 14px; border-radius: 12px; background: rgba(63, 184, 255, .10);
             border-left: 4px solid var(--q); font-size: 16px; line-height: 1.4; min-height: 52px; }
   #status.ok { border-left-color: var(--ok); } #status.bad { border-left-color: var(--bad); }
+  #status.wait { border-left-color: #ffc83d; }
+  #status.wait::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 10px; vertical-align: -2px;
+                         border: 3px solid #ffc83d; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .staff { margin-top: 30px; border-top: 1px solid rgba(255, 255, 255, .15); padding-top: 16px; display: none; }
   .staff.on { display: block; }
   .staff button { background: transparent; border: 1px solid var(--bad); color: var(--bad); padding: 12px 16px;
@@ -73,6 +77,17 @@
   #rules .q, #rules .card b .q { color: var(--q); font-weight: 700; }
   #rules .card span b { font-size: inherit; color: var(--text); }
   #rules .close { position: sticky; top: 0; float: right; }
+  #hist-box { margin-top: 22px; }
+  #hist { display: flex; flex-direction: column; gap: 8px; }
+  .ev { background: var(--card); border-radius: 12px; padding: 10px 12px; border-left: 4px solid var(--muted); }
+  .ev.engine { border-left-color: #b48cff; } .ev.human { border-left-color: var(--ok); }
+  .ev.info { border-left-color: var(--q); } .ev.result { border-left-color: #ffc83d; background: rgba(255, 200, 61, .12); }
+  .ev b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .ev div { color: var(--muted); font-size: 14px; line-height: 1.4; }
+  .ev .q { color: var(--q); font-weight: 700; }
+  .ev .bar { height: 6px; border-radius: 3px; background: #111; margin-top: 6px; overflow: hidden; }
+  .ev .bar i { display: block; height: 100%; background: #f2f6ff; }
+  .ev small { color: var(--muted); font-size: 12px; }
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 </style>
@@ -106,6 +121,11 @@
   <button class="start" id="start"></button>
   <div id="status"></div>
 
+  <div id="hist-box" class="hidden">
+    <h2 id="t-hist"></h2>
+    <div id="hist"></div>
+  </div>
+
   <div class="staff" id="staff">
     <h2 id="t-staff"></h2>
     <button id="stop"></button>
@@ -125,25 +145,25 @@ const T = {
     hints: 'Pistas', hintsOpts: ['No', 'Sí'], hintsHint: 'La pantalla te sugiere una jugada en cada turno.',
     goTitle: '¡Ve a la tablet!', goYou: 'Haz tu primer movimiento: toca tu pieza, la casilla y Drop.',
     goAi: 'La IA mueve primero. Luego te toca a ti en la tablet.', goClose: 'Cerrar',
-    noPhone: 'Ya no necesitas el teléfono. Puedes guardarlo o consultar las reglas aquí.', rulesBtn: 'Ver reglas',
+    noPhone: 'Ya no necesitas el teléfono para jugar. Aquí puedes ver las reglas y seguir los comentarios de la partida.', hist: 'Comentarios de la partida', winW: 'Blancas', winB: 'Negras', rulesBtn: 'Ver reglas',
     rulesTitle: 'Cómo jugar ajedrez cuántico', rulesClose: 'Cerrar',
     rules: [
       ['Objetivo', 'Captura al rey rival. <b style="display:inline">No existe el jaque</b>: el rey puede quedar atacado.'],
       ['Mover', 'Toca tu pieza, toca la casilla destino y pulsa <b style="display:inline">Drop</b>.'],
       ['Dividir · <span class="q">superposición</span>', 'Toca una pieza (no un peón), luego DOS casillas vacías y pulsa Drop. Queda en ambas a la vez, 50% / 50%. Puedes volver a dividir una mitad (25%).'],
-      ['Unir', 'Toca las dos mitades de tu pieza, luego la casilla destino y pulsa Drop. Vuelve a ser 100% real.'],
+      ['Unir', 'Toca las dos mitades de tu pieza, luego la casilla destino y pulsa Drop. Se unen las probabilidades en una sola.'],
       ['<span class="q">Medición</span>', 'Si una captura podría dejar dos piezas en la misma casilla, el juego mide. Si tu pieza no estaba ahí, la captura falla y pierdes el turno.'],
-      ['<span class="q">Entrelazamiento</span>', 'Una pieza dividida puede bloquear un camino solo a veces. Entonces el destino de dos piezas queda ligado.'],
+      ['<span class="q">Entrelazamiento</span>', 'Piezas que interactúan con piezas en superposición pueden quedar correlacionadas y por lo tanto causar un entrelazamiento entre superposiciones. Conocer algo de una te dice algo de la otra.'],
       ['El anillo', 'El anillo de color alrededor de cada pieza muestra su <span class="q">probabilidad</span>: completo = 100%, medio anillo = 50%.'],
-      ['Peones', 'No se dividen ni se unen. Avanzan, capturan y coronan como siempre.'],
+      ['Peones', 'No se dividen ni se unen. Si un peón captura en diagonal a una pieza en superposición, también queda en superposición y <span class="q">entrelazado</span>: solo avanzó si la pieza estaba ahí, porque un peón no puede moverse en diagonal sin capturar.'],
       ['Tus propias piezas', 'No puedes mover a una casilla donde podría estar una de tus piezas.'],
     ],
     pin: 'Código de la pantalla', start: 'Empezar partida', staff: 'Personal', stop: 'Detener partida',
     staffHint: 'Detiene a la IA. Para una nueva partida pulsa Restart en la tablet si hace falta.',
     levels: [['Principiante', '≈ 1400'], ['Intermedio', '≈ 1550'], ['Avanzado', '≈ 1850'], ['Experto', 'muy fuerte']],
     colors: ['Blancas', 'Negras', 'Al azar'],
-    st: { idle: 'Listo para empezar.', sending: 'Enviando…', waiting: 'Esperando jugador.', starting: '¡Partida en marcha! Ve a la tablet.',
-          playing: 'Partida en curso.', game_over: 'Partida terminada.', stopped: 'Partida detenida.',
+    st: { idle: 'Listo para empezar.', sending: 'Enviando…', waiting: 'Esperando jugador.', starting: 'Preparando la partida en la tablet… espera un momento.',
+          playing: '¡Partida en marcha! Juega en la tablet.', game_over: 'Partida terminada.', stopped: 'Partida detenida.',
           bad_pin: 'Código incorrecto. Revisa el número en la pantalla.', busy: 'Ya hay una partida en curso.',
           need_pin: 'Escribe el código de 4 cifras que aparece en la pantalla.', offline: 'Sin conexión con el juego.',
           restart: 'Pulsa Restart en la tablet para empezar.' }
@@ -154,25 +174,25 @@ const T = {
     hints: 'Hints', hintsOpts: ['No', 'Yes'], hintsHint: 'The screen suggests a move on each turn.',
     goTitle: 'Go to the tablet!', goYou: 'Make your first move: tap your piece, the square and Drop.',
     goAi: 'The AI moves first. Then it is your turn on the tablet.', goClose: 'Close',
-    noPhone: 'You do not need your phone anymore. Put it away or check the rules here.', rulesBtn: 'View rules',
+    noPhone: 'You do not need your phone to play. Here you can read the rules and follow the game commentary.', hist: 'Game commentary', winW: 'White', winB: 'Black', rulesBtn: 'View rules',
     rulesTitle: 'How to play quantum chess', rulesClose: 'Close',
     rules: [
       ['Goal', 'Capture the opposing king. <b style="display:inline">There is no check</b>: a king may stay attacked.'],
       ['Move', 'Tap your piece, tap the target square and press <b style="display:inline">Drop</b>.'],
       ['Split · <span class="q">superposition</span>', 'Tap a piece (not a pawn), then TWO empty squares and press Drop. It is on both at once, 50% / 50%. You can split a half again (25%).'],
-      ['Merge', 'Tap both halves of your piece, then the target square and press Drop. It becomes 100% real again.'],
+      ['Merge', 'Tap both halves of your piece, then the target square and press Drop. Their probabilities join into one.'],
       ['<span class="q">Measurement</span>', 'If a capture could leave two pieces on one square, the game measures. If your piece was not there, the capture fails and you lose the turn.'],
-      ['<span class="q">Entanglement</span>', 'A split piece may block a path only some of the time. Then the fate of two pieces is linked.'],
+      ['<span class="q">Entanglement</span>', 'Pieces that interact with pieces in superposition can become correlated, creating entanglement between superpositions. Knowing something about one tells you something about the other.'],
       ['The ring', 'The colored ring around each piece shows its <span class="q">probability</span>: full = 100%, half ring = 50%.'],
-      ['Pawns', 'They cannot split or merge. They move, capture and promote as usual.'],
+      ['Pawns', 'They cannot split or merge. If a pawn captures a piece in superposition diagonally, the pawn also ends up in superposition and <span class="q">entangled</span>: it only moved if the piece was there, since a pawn cannot move diagonally without capturing.'],
       ['Your own pieces', 'You cannot move to a square where one of your own pieces might be.'],
     ],
     pin: 'Code on the screen', start: 'Start game', staff: 'Staff', stop: 'Stop game',
     staffHint: 'Stops the AI. For a new game press Restart on the tablet if needed.',
     levels: [['Beginner', '≈ 1400'], ['Intermediate', '≈ 1550'], ['Advanced', '≈ 1850'], ['Expert', 'very strong']],
     colors: ['White', 'Black', 'Random'],
-    st: { idle: 'Ready to start.', sending: 'Sending…', waiting: 'Waiting for a player.', starting: 'Game on! Go to the tablet.',
-          playing: 'Game in progress.', game_over: 'Game over.', stopped: 'Game stopped.',
+    st: { idle: 'Ready to start.', sending: 'Sending…', waiting: 'Waiting for a player.', starting: 'Setting up the game on the tablet… please wait.',
+          playing: 'Game on! Play on the tablet.', game_over: 'Game over.', stopped: 'Game stopped.',
           bad_pin: 'Wrong code. Check the number on the screen.', busy: 'A game is already running.',
           need_pin: 'Type the 4-digit code shown on the screen.', offline: 'No connection to the game.',
           restart: 'Press Restart on the tablet to begin.' }
@@ -184,7 +204,33 @@ const RELAY = params.get('relay') || 'https://ntfy.sh';
 const local = !topic;                            // served by the kiosk itself: talk to /api directly
 const sel = { level: 2, color: 'white', hints: false, lang: params.get('lang') === 'en' ? 'en' : 'es' };
 let lastColor = 'white';
-let lastState = 'idle', pending = null;
+let lastState = 'idle', pending = null, mine = false;   // mine: this phone started the current game
+const loadedAt = Date.now();
+let myGid = '', hist = [];
+try { myGid = localStorage.getItem('qchess-gid:' + (topic || 'local')) || ''; } catch (e) { }
+function setGid(gid) {
+  if (!gid || gid === myGid) return;
+  myGid = gid; hist = []; renderHist();
+  try { localStorage.setItem('qchess-gid:' + (topic || 'local'), gid); } catch (e) { }
+}
+function addHist(seq, entries) {
+  entries.forEach((e, i) => { const k = seq + i; if (k >= hist.length) hist.push(e); });
+  renderHist();
+}
+function renderHist() {
+  const L = T[sel.lang];
+  $('t-hist').textContent = L.hist;
+  $('hist-box').classList.toggle('hidden', !hist.length);
+  $('hist').innerHTML = hist.slice().reverse().map(e => {
+    let bar = '';
+    if (typeof e.p === 'number') {
+      const w = Math.round(e.p * 100);
+      bar = `<div class="bar"><i style="width:${w}%"></i></div><small>${L.winW} ${w}% · ${L.winB} ${100 - w}%</small>`;
+    }
+    const esc = String(e.t || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+    return `<div class="ev ${e.w || ''}"><b>${esc}</b>${e.h ? `<div>${e.h}</div>` : ''}${bar}</div>`;
+  }).join('');
+}
 const $ = id => document.getElementById(id);
 
 function render() {
@@ -211,21 +257,26 @@ function render() {
   $('pin-box').classList.toggle('hidden', local);
   $('staff').classList.toggle('on', local || params.get('staff') === '1');
   showState(lastState);
+  renderHist();
 }
 function goToTablet(color) {
   const L = T[sel.lang];
   $('go-text').textContent = color === 'black' ? L.goAi : L.goYou;
   $('go').classList.add('on');
 }
-$('go-close').onclick = () => $('go').classList.remove('on');
+$('go-close').onclick = () => { $('go').classList.remove('on'); $('hist-box').scrollIntoView({ behavior: 'smooth' }); };
 $('go-rules').onclick = () => { $('go').classList.remove('on'); $('rules').classList.add('on'); };
 $('open-rules').onclick = () => $('rules').classList.add('on');
 $('rules-close').onclick = () => $('rules').classList.remove('on');
-function showState(key, cls) {
-  if (key === 'starting' && lastState !== 'starting') goToTablet(lastColor);
+function showState(key, cls, replay) {
+  // "Go to the tablet" only once the tablet really shows the new board (the kiosk may be resetting it first)
+  if (key === 'playing' && mine && lastState !== 'playing' && !replay) goToTablet(lastColor);
+  if (['waiting', 'game_over', 'stopped'].includes(key)) mine = false;
   lastState = key;
   const el = $('status'); el.textContent = T[sel.lang].st[key] || key;
-  el.className = cls || (['starting', 'playing'].includes(key) ? 'ok' : ['bad_pin', 'busy', 'offline'].includes(key) ? 'bad' : '');
+  el.className = cls || (key === 'playing' ? 'ok' : ['starting', 'restart', 'sending'].includes(key) ? 'wait'
+    : ['bad_pin', 'busy', 'offline'].includes(key) ? 'bad' : '');
+  $('start').disabled = ['sending', 'starting', 'restart', 'playing'].includes(key);
 }
 
 document.addEventListener('click', e => {
@@ -245,7 +296,9 @@ async function send(action) {
   try {
     if (local) {
       const r = await fetch('/api/' + action, { method: 'POST', body: JSON.stringify(msg) });
-      const d = await r.json(); if (d.player_color) lastColor = d.player_color; showState(d.error || d.state);
+      const d = await r.json(); if (d.player_color) lastColor = d.player_color; if (d.gid) setGid(d.gid);
+      if (d.state === 'starting') mine = true;
+      showState(d.error || d.state);
     } else {
       pending = msg.nonce;
       await fetch(`${RELAY}/${topic}`, { method: 'POST', body: JSON.stringify(msg) });
@@ -259,15 +312,29 @@ $('stop').onclick = () => send('stop');
 // live state from the kiosk
 if (local) {
   setInterval(async () => {
-    try { const d = await (await fetch('/api/state')).json(); if (!pending) showState(d.state); } catch (e) { showState('offline'); }
+    try {
+      const d = await (await fetch('/api/state')).json(); if (!pending) showState(d.state);
+      if (d.gid) {
+        const h = await (await fetch('/api/history')).json();
+        if (h.gid !== myGid) { myGid = h.gid; hist = []; }
+        if (h.log.length !== hist.length) { hist = []; addHist(0, h.log); }
+      }
+    } catch (e) { showState('offline'); }
   }, 1500);
 } else {
-  const es = new EventSource(`${RELAY}/${topic}-s/sse`);
+  // after a reload, replay the relay from the start of this phone's last game (ntfy keeps ~12 h)
+  const es = new EventSource(`${RELAY}/${topic}-s/sse` + (myGid ? `?since=${myGid}` : ''));
   es.onmessage = e => {
     try {
       const outer = JSON.parse(e.data); const d = JSON.parse(outer.message || '{}');
-      if (d.nonce && d.nonce === pending) { pending = null; if (d.player_color) lastColor = d.player_color; }
-      if (!pending) showState(d.error || d.state);
+      const replay = (outer.time || 0) * 1000 < loadedAt - 3000;
+      if (d.log) { if (d.gid === myGid) addHist(d.seq || 0, d.log); return; }
+      if (d.nonce && d.nonce === pending) {
+        pending = null; if (d.player_color) lastColor = d.player_color; if (d.gid) setGid(d.gid);
+        if (d.state === 'starting') mine = true;
+      }
+      if (replay && d.error) return;
+      if (!pending && (d.error || d.state)) showState(d.error || d.state, undefined, replay);
     } catch (err) { }
   };
 }
