@@ -63,7 +63,7 @@
   #go .btns { display: flex; gap: 12px; }
   #go button { background: transparent; color: var(--text); border: 1px solid var(--edge); padding: 12px 20px;
                border-radius: 12px; font-size: 17px; font-weight: 700; }
-  #go button.gold, .gold { background: #ffc83d; border-color: #ffc83d; color: #2a1d00; box-shadow: 0 0 16px rgba(255, 200, 61, .5); }
+  #go button.gold, #thanks button.gold, .gold { background: #ffc83d; border-color: #ffc83d; color: #2a1d00; box-shadow: 0 0 16px rgba(255, 200, 61, .5); }
   #go .nophone { color: var(--text); font-size: 16px; margin: -10px 0 22px; opacity: .85; }
   .rules-link { background: transparent; border: 1px solid #ffc83d; color: #ffc83d; border-radius: 999px;
                 padding: 6px 12px; font-size: 14px; font-weight: 700; margin-top: 4px; }
@@ -88,6 +88,22 @@
   .ev .bar { height: 6px; border-radius: 3px; background: #111; margin-top: 6px; overflow: hidden; }
   .ev .bar i { display: block; height: 100%; background: #f2f6ff; }
   .ev small { color: var(--muted); font-size: 12px; }
+  .endgame { width: 100%; margin-top: 12px; padding: 14px; border-radius: 14px; background: transparent;
+             border: 2px solid var(--bad); color: var(--bad); font-size: 18px; font-weight: 800; }
+  .endgame.sure { background: var(--bad); color: #2a0008; }
+  #thanks { position: fixed; inset: 0; background: rgba(6, 14, 38, .96); display: none; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; padding: 24px; z-index: 15; overflow-y: auto; }
+  #thanks.on { display: flex; animation: fadein .3s ease; }
+  #thanks .atom { font-size: 64px; color: var(--q); animation: spin 6s linear infinite; line-height: 1; }
+  #thanks h3 { font-size: 30px; margin: 14px 0 10px; color: #ffc83d; }
+  #thanks p { color: var(--text); font-size: 17px; line-height: 1.45; margin: 0 0 14px; max-width: 460px; }
+  #thanks .q { color: var(--q); font-weight: 700; }
+  #thanks .mail { display: inline-block; margin: 4px 0 22px; color: var(--q); font-size: 18px; font-weight: 700;
+                  border: 1px solid var(--q); border-radius: 12px; padding: 10px 16px; text-decoration: none; word-break: break-all; }
+  #thanks .btns { display: flex; gap: 12px; }
+  #thanks button { background: transparent; color: var(--text); border: 1px solid var(--edge); padding: 12px 20px;
+                   border-radius: 12px; font-size: 17px; font-weight: 700; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; opacity: .7; margin-top: 30px; }
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 </style>
@@ -120,6 +136,7 @@
 
   <button class="start" id="start"></button>
   <div id="status"></div>
+  <button class="endgame hidden" id="endgame"></button>
 
   <div id="hist-box" class="hidden">
     <h2 id="t-hist"></h2>
@@ -131,13 +148,18 @@
     <button id="stop"></button>
     <p class="hint" id="t-staff-hint"></p>
   </div>
+  <footer id="version"></footer>
 </main>
+<div id="thanks"><div class="atom">⚛</div><h3 id="th-title"></h3><p id="th-text"></p><p id="th-contact"></p>
+  <a class="mail" id="th-mail" href="mailto:a01286903@tec.mx">a01286903@tec.mx</a>
+  <div class="btns"><button id="th-close"></button><button class="gold" id="th-rules"></button></div></div>
 <div id="go"><div class="arrow">↓</div><div class="tablet"></div><h3 id="go-title"></h3><p id="go-text"></p>
   <p class="nophone" id="go-nophone"></p>
   <div class="btns"><button id="go-close"></button><button class="gold" id="go-rules"></button></div></div>
 <div id="rules"><div class="wrap"><button class="rules-link close" id="rules-close"></button>
   <h3 id="rules-title"></h3><div id="rules-body"></div></div></div>
 <script>
+const VERSION = '1.4.0';                          // keep equal to __version__ in qchess/__init__.py
 const T = {
   es: {
     title: 'Ajedrez <span class="q">cuántico</span> vs IA', sub: 'Elige la dificultad y tu color. Luego juega en la tablet.',
@@ -147,6 +169,10 @@ const T = {
     goAi: 'La IA mueve primero. Luego te toca a ti en la tablet.', goClose: 'Cerrar',
     noPhone: 'Ya no necesitas el teléfono para jugar. Aquí puedes ver las reglas y seguir los comentarios de la partida.', hist: 'Comentarios de la partida', winW: 'Blancas', winB: 'Negras', rulesBtn: 'Ver reglas',
     rulesTitle: 'Cómo jugar ajedrez cuántico', rulesClose: 'Cerrar',
+    endGame: 'Terminar partida', endSure: '¿Seguro? Toca otra vez para terminar',
+    thTitle: '¡Gracias por jugar!',
+    thText: 'Acabas de usar <span class="q">superposición</span>, <span class="q">medición</span> y <span class="q">entrelazamiento</span>, las mismas ideas con las que funcionan las computadoras cuánticas. La tecnología cuántica se está construyendo hoy: sigue explorando, haz preguntas y anímate a ser parte de ella.',
+    thContact: '¿Preguntas, ideas o quieres saber más? Escríbenos:',
     rules: [
       ['Objetivo', 'Captura al rey rival. <b style="display:inline">No existe el jaque</b>: el rey puede quedar atacado.'],
       ['Mover', 'Toca tu pieza, toca la casilla destino y pulsa <b style="display:inline">Drop</b>.'],
@@ -176,6 +202,10 @@ const T = {
     goAi: 'The AI moves first. Then it is your turn on the tablet.', goClose: 'Close',
     noPhone: 'You do not need your phone to play. Here you can read the rules and follow the game commentary.', hist: 'Game commentary', winW: 'White', winB: 'Black', rulesBtn: 'View rules',
     rulesTitle: 'How to play quantum chess', rulesClose: 'Close',
+    endGame: 'End game', endSure: 'Sure? Tap again to end the game',
+    thTitle: 'Thanks for playing!',
+    thText: 'You just used <span class="q">superposition</span>, <span class="q">measurement</span> and <span class="q">entanglement</span>, the same ideas that make quantum computers work. Quantum technology is being built today: keep exploring, keep asking questions and become part of it.',
+    thContact: 'Questions, ideas or want to learn more? Write to us:',
     rules: [
       ['Goal', 'Capture the opposing king. <b style="display:inline">There is no check</b>: a king may stay attacked.'],
       ['Move', 'Tap your piece, tap the target square and press <b style="display:inline">Drop</b>.'],
@@ -204,7 +234,7 @@ const RELAY = params.get('relay') || 'https://ntfy.sh';
 const local = !topic;                            // served by the kiosk itself: talk to /api directly
 const sel = { level: 2, color: 'white', hints: false, lang: params.get('lang') === 'en' ? 'en' : 'es' };
 let lastColor = 'white';
-let lastState = 'idle', pending = null, mine = false;   // mine: this phone started the current game
+let lastState = 'idle', pending = null, mine = false, endArmed = false, endTimer = null;   // mine: this phone started the current game
 const loadedAt = Date.now();
 let myGid = '', hist = [];
 try { myGid = localStorage.getItem('qchess-gid:' + (topic || 'local')) || ''; } catch (e) { }
@@ -253,6 +283,10 @@ function render() {
   $('go-nophone').textContent = L.noPhone; $('go-rules').textContent = L.rulesBtn;
   $('open-rules').textContent = L.rulesBtn; $('rules-close').textContent = L.rulesClose;
   $('rules-title').textContent = L.rulesTitle;
+  $('th-title').textContent = L.thTitle; $('th-text').innerHTML = L.thText; $('th-contact').textContent = L.thContact;
+  $('th-close').textContent = L.goClose; $('th-rules').textContent = L.rulesBtn;
+  $('endgame').textContent = endArmed ? L.endSure : L.endGame;
+  $('version').textContent = 'Quantum Chess · Mostla · v' + VERSION;
   $('rules-body').innerHTML = L.rules.map(r => `<div class="card"><b>${r[0]}</b><span>${r[1]}</span></div>`).join('');
   $('pin-box').classList.toggle('hidden', local);
   $('staff').classList.toggle('on', local || params.get('staff') === '1');
@@ -266,12 +300,31 @@ function goToTablet(color) {
 }
 $('go-close').onclick = () => { $('go').classList.remove('on'); $('hist-box').scrollIntoView({ behavior: 'smooth' }); };
 $('go-rules').onclick = () => { $('go').classList.remove('on'); $('rules').classList.add('on'); };
+function showThanks() {
+  $('go').classList.remove('on');
+  $('thanks').classList.add('on');
+}
+$('th-close').onclick = () => $('thanks').classList.remove('on');
+$('th-rules').onclick = () => { $('thanks').classList.remove('on'); $('rules').classList.add('on'); };
+// the player ends their own game: two taps (no browser dialog), uses the same code as Start
+$('endgame').onclick = () => {
+  if (!endArmed) {
+    endArmed = true; $('endgame').classList.add('sure'); $('endgame').textContent = T[sel.lang].endSure;
+    clearTimeout(endTimer);
+    endTimer = setTimeout(() => { endArmed = false; $('endgame').classList.remove('sure'); $('endgame').textContent = T[sel.lang].endGame; }, 4000);
+    return;
+  }
+  clearTimeout(endTimer); endArmed = false; $('endgame').classList.remove('sure');
+  send('stop');
+};
 $('open-rules').onclick = () => $('rules').classList.add('on');
 $('rules-close').onclick = () => $('rules').classList.remove('on');
 function showState(key, cls, replay) {
   // "Go to the tablet" only once the tablet really shows the new board (the kiosk may be resetting it first)
   if (key === 'playing' && mine && lastState !== 'playing' && !replay) goToTablet(lastColor);
+  if (mine && ['game_over', 'stopped'].includes(key) && !replay) showThanks();
   if (['waiting', 'game_over', 'stopped'].includes(key)) mine = false;
+  $('endgame').classList.toggle('hidden', !(mine && ['starting', 'restart', 'playing'].includes(key)));
   lastState = key;
   const el = $('status'); el.textContent = T[sel.lang].st[key] || key;
   el.className = cls || (key === 'playing' ? 'ok' : ['starting', 'restart', 'sending'].includes(key) ? 'wait'
