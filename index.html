@@ -103,6 +103,42 @@
   #thanks .btns { display: flex; gap: 12px; }
   #thanks button { background: transparent; color: var(--text); border: 1px solid var(--edge); padding: 12px 20px;
                    border-radius: 12px; font-size: 17px; font-weight: 700; }
+  /* game view: while this phone's game runs, hide the setup and show the commentary first */
+  body.ingame #setup, body.ingame #t-sub { display: none; }
+  body.ingame #hist-box { display: block !important; margin-top: 14px; }
+  #hist-head { display: flex; align-items: center; gap: 8px; }
+  #hist-head h2 { margin: 0; }
+  .live { display: none; width: 10px; height: 10px; border-radius: 50%; background: var(--bad); animation: blink 1.2s infinite; }
+  body.ingame .live { display: inline-block; }
+  #hist-note { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
+  .ev.new { animation: newev 1.6s ease; }
+  @keyframes newev { from { box-shadow: 0 0 0 2px #ffc83d, 0 0 18px rgba(255, 200, 61, .7); } to { box-shadow: none; } }
+  @keyframes blink { 50% { opacity: .25; } }
+  .ev.empty { border-left-color: var(--q); color: var(--muted); font-size: 14px; }
+  #go .demo { display: flex; justify-content: center; margin: 6px 0 4px; }
+  #go .btns button.wide { background: var(--edge); color: #06223a; border-color: var(--edge); }
+.ht { position: relative; width: calc(4 * var(--s) + 14px); height: calc(4.05 * var(--s) + 44px); flex-shrink: 0; }
+.ht-board { position: absolute; left: 0; top: 0; display: grid; grid-template-columns: repeat(4, var(--s)); }
+.ht-sq { width: var(--s); height: var(--s); box-sizing: border-box; transition: box-shadow .2s; }
+.ht-sq.lt { background: #3a79d3; } .ht-sq.dk { background: #20498a; }
+.ht-sq.hl { box-shadow: inset 0 0 0 3px #ffc83d; }
+.ht-piece { position: absolute; width: calc(.82 * var(--s)); height: calc(.82 * var(--s)); margin: calc(-.41 * var(--s)) 0 0 calc(-.41 * var(--s));
+            border-radius: 50%; background: #10284f; border: 3px solid #3fd0e6; box-sizing: border-box; color: #f2f6ff;
+            display: flex; align-items: center; justify-content: center; font-size: calc(.52 * var(--s));
+            transition: left .6s ease, top .6s ease, opacity .4s; z-index: 2; }
+.ht-piece.half { border-color: #3fd0e6 #3fd0e6 rgba(63, 208, 230, .15) rgba(63, 208, 230, .15); opacity: .8; }
+.ht-ghost { opacity: 0; } .ht-ghost.on { opacity: .8; }
+.ht-drop { position: absolute; left: calc(2.35 * var(--s)); top: calc(3.3 * var(--s)); width: calc(1.3 * var(--s)); height: calc(.64 * var(--s));
+           border: 1px solid #6fb0ff; border-radius: 6px; background: #1d3f86; color: #eef4ff; font-size: calc(.3 * var(--s));
+           font-weight: 700; display: flex; align-items: center; justify-content: center; box-sizing: border-box; transition: background .2s; }
+.ht-drop.on { background: #ffc83d; color: #2a1d00; }
+.ht-finger { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; z-index: 3;
+             background: rgba(255, 255, 255, .55); border: 2px solid #fff; box-shadow: 0 0 10px rgba(255, 255, 255, .8);
+             transition: left .55s ease, top .55s ease, transform .15s; }
+.ht-finger.tap { transform: scale(.65); background: rgba(255, 200, 61, .9); }
+.ht-cap { position: absolute; left: 0; right: 0; top: calc(4.05 * var(--s)); font-size: 14px; font-weight: 700; color: #ffc83d;
+          line-height: 1.25; }
+
   footer { text-align: center; color: var(--muted); font-size: 12px; opacity: .7; margin-top: 30px; }
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
   @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
@@ -118,6 +154,7 @@
   </header>
   <p class="sub" id="t-sub"></p>
 
+  <section id="setup">
   <h2 id="t-level"></h2>
   <div class="grid" id="levels"></div>
 
@@ -135,11 +172,13 @@
   </div>
 
   <button class="start" id="start"></button>
+  </section>
   <div id="status"></div>
   <button class="endgame hidden" id="endgame"></button>
 
   <div id="hist-box" class="hidden">
-    <h2 id="t-hist"></h2>
+    <div id="hist-head"><span class="live"></span><h2 id="t-hist"></h2></div>
+    <p id="hist-note"></p>
     <div id="hist"></div>
   </div>
 
@@ -153,21 +192,91 @@
 <div id="thanks"><div class="atom">⚛</div><h3 id="th-title"></h3><p id="th-text"></p><p id="th-contact"></p>
   <a class="mail" id="th-mail" href="mailto:a01286903@tec.mx">a01286903@tec.mx</a>
   <div class="btns"><button id="th-close"></button><button class="gold" id="th-rules"></button></div></div>
-<div id="go"><div class="arrow">↓</div><div class="tablet"></div><h3 id="go-title"></h3><p id="go-text"></p>
+<div id="go"><h3 id="go-title"></h3><p id="go-text"></p><div class="demo"><div id="go-demo"></div></div>
   <p class="nophone" id="go-nophone"></p>
-  <div class="btns"><button id="go-close"></button><button class="gold" id="go-rules"></button></div></div>
+  <div class="btns"><button class="wide" id="go-close"></button><button class="gold" id="go-rules"></button></div></div>
 <div id="rules"><div class="wrap"><button class="rules-link close" id="rules-close"></button>
   <h3 id="rules-title"></h3><div id="rules-body"></div></div></div>
 <script>
-const VERSION = '1.4.0';                          // keep equal to __version__ in qchess/__init__.py
+// Animated "how to move" demo for the SpinQ app: a finger taps the piece, the square(s) and Drop.
+// Shared by the OBS panel and the phone page. Usage: howto(element, lang, squarePx)
+(function () {
+  const CAP = {
+    es: { move: ['1. Toca tu pieza', '2. Toca la casilla destino', '3. Pulsa Drop', '¡Listo! La pieza se mueve.'],
+          split: ['Dividir: toca tu pieza', '…luego DOS casillas', 'Pulsa Drop', '¡Superposición! 50% / 50%'] },
+    en: { move: ['1. Tap your piece', '2. Tap the target square', '3. Press Drop', 'Done! The piece moves.'],
+          split: ['Split: tap your piece', '…then TWO squares', 'Press Drop', 'Superposition! 50% / 50%'] },
+  };
+  let token = 0;
+  window.howto = function (root, lang, s) {
+    const my = ++token;
+    s = s || 44;
+    root.innerHTML = '';
+    root.classList.add('ht');
+    root.style.setProperty('--s', s + 'px');
+    const el = (cls, parent) => { const d = document.createElement('div'); d.className = cls; (parent || root).appendChild(d); return d; };
+    const board = el('ht-board');
+    const sq = [];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
+      const d = el('ht-sq ' + ((r + c) % 2 ? 'dk' : 'lt'), board); sq.push(d);
+    }
+    const at = (c, r) => sq[r * 4 + c];
+    const piece = el('ht-piece'); piece.textContent = '♞';
+    const ghost = el('ht-piece ht-ghost'); ghost.textContent = '♞';
+    const drop = el('ht-drop'); drop.textContent = 'Drop';
+    const finger = el('ht-finger');
+    const cap = el('ht-cap');
+    const pos = (node, c, r) => { node.style.left = (c + .5) * s + 'px'; node.style.top = (r + .5) * s + 'px'; };
+    const dropXY = () => [3 * s, 3 * s + .62 * s];
+    const sleep = ms => new Promise(res => setTimeout(res, ms));
+    const alive = () => my === token && root.isConnected;
+    async function tap(x, y) {
+      finger.style.left = x + 'px'; finger.style.top = y + 'px';
+      await sleep(650);
+      finger.classList.add('tap'); await sleep(260); finger.classList.remove('tap'); await sleep(150);
+    }
+    async function run() {
+      const C = CAP[lang] || CAP.es;
+      let split = false;
+      while (alive()) {
+        const L = split ? C.split : C.move;
+        sq.forEach(d => d.classList.remove('hl'));
+        drop.classList.remove('on');
+        piece.className = 'ht-piece'; ghost.className = 'ht-piece ht-ghost';
+        piece.style.transition = 'none'; pos(piece, 0, 2); pos(ghost, 0, 2);
+        finger.style.left = 4.6 * s + 'px'; finger.style.top = 3.2 * s + 'px';
+        await sleep(50); piece.style.transition = '';
+        cap.textContent = L[0]; await tap((.5) * s, 2.5 * s); at(0, 2).classList.add('hl');
+        if (!alive()) return;
+        cap.textContent = L[1]; await tap(1.5 * s, .5 * s); at(1, 0).classList.add('hl');
+        if (split) { await tap(2.5 * s, 1.5 * s); at(2, 1).classList.add('hl'); }
+        if (!alive()) return;
+        cap.textContent = L[2]; const [dx, dy] = dropXY(); await tap(dx, dy); drop.classList.add('on');
+        sq.forEach(d => d.classList.remove('hl'));
+        pos(piece, 1, 0);
+        if (split) { piece.classList.add('half'); ghost.classList.add('on', 'half'); pos(ghost, 2, 1); }
+        finger.style.left = 4.6 * s + 'px'; finger.style.top = 3.2 * s + 'px';
+        cap.textContent = L[3];
+        await sleep(split ? 2400 : 1600);
+        split = !split;
+      }
+    }
+    run();
+  };
+})();
+</script>
+<script>
+const VERSION = '1.5.0';                          // keep equal to __version__ in qchess/__init__.py
 const T = {
   es: {
     title: 'Ajedrez <span class="q">cuántico</span> vs IA', sub: 'Elige la dificultad y tu color. Luego juega en la tablet.',
     level: 'Dificultad', color: 'Tu color', whiteFirst: 'Las blancas mueven primero.',
     hints: 'Pistas', hintsOpts: ['No', 'Sí'], hintsHint: 'La pantalla te sugiere una jugada en cada turno.',
-    goTitle: '¡Ve a la tablet!', goYou: 'Haz tu primer movimiento: toca tu pieza, la casilla y Drop.',
-    goAi: 'La IA mueve primero. Luego te toca a ti en la tablet.', goClose: 'Cerrar',
-    noPhone: 'Ya no necesitas el teléfono para jugar. Aquí puedes ver las reglas y seguir los comentarios de la partida.', hist: 'Comentarios de la partida', winW: 'Blancas', winB: 'Negras', rulesBtn: 'Ver reglas',
+    goTitle: '¡Ve a la tablet!', goYou: 'Haz tu primer movimiento en la tablet así:',
+    goAi: 'La IA mueve primero. Luego te toca a ti en la tablet así:', goClose: 'Ver comentarios', close: 'Cerrar',
+    histNote: 'Cada jugada aparece aquí con su explicación (se actualiza cada ~20 s).',
+    histEmpty: 'Los comentarios aparecerán aquí en cuanto empiece la partida.',
+    noPhone: 'Juegas en la tablet. Aquí en tu teléfono verás los comentarios de cada jugada.', hist: 'Comentarios en vivo', winW: 'Blancas', winB: 'Negras', rulesBtn: 'Ver reglas',
     rulesTitle: 'Cómo jugar ajedrez cuántico', rulesClose: 'Cerrar',
     endGame: 'Terminar partida', endSure: '¿Seguro? Toca otra vez para terminar',
     thTitle: '¡Gracias por jugar!',
@@ -192,15 +301,18 @@ const T = {
           playing: '¡Partida en marcha! Juega en la tablet.', game_over: 'Partida terminada.', stopped: 'Partida detenida.',
           bad_pin: 'Código incorrecto. Revisa el número en la pantalla.', busy: 'Ya hay una partida en curso.',
           need_pin: 'Escribe el código de 4 cifras que aparece en la pantalla.', offline: 'Sin conexión con el juego.',
-          restart: 'Pulsa Restart en la tablet para empezar.' }
+          restart: 'Pulsa Restart en la tablet para empezar.',
+          setup: 'La estación se está preparando. Intenta de nuevo en un momento.' }
   },
   en: {
     title: 'Quantum chess <span class="q">vs AI</span>', sub: 'Choose the difficulty and your color, then play on the tablet.',
     level: 'Difficulty', color: 'Your color', whiteFirst: 'White moves first.',
     hints: 'Hints', hintsOpts: ['No', 'Yes'], hintsHint: 'The screen suggests a move on each turn.',
-    goTitle: 'Go to the tablet!', goYou: 'Make your first move: tap your piece, the square and Drop.',
-    goAi: 'The AI moves first. Then it is your turn on the tablet.', goClose: 'Close',
-    noPhone: 'You do not need your phone to play. Here you can read the rules and follow the game commentary.', hist: 'Game commentary', winW: 'White', winB: 'Black', rulesBtn: 'View rules',
+    goTitle: 'Go to the tablet!', goYou: 'Make your first move on the tablet like this:',
+    goAi: 'The AI moves first. Then it is your turn on the tablet, like this:', goClose: 'Follow the game', close: 'Close',
+    histNote: 'Every move shows up here with its explanation (updates every ~20 s).',
+    histEmpty: 'The commentary will appear here as soon as the game starts.',
+    noPhone: 'You play on the tablet. Here on your phone you will see the commentary for every move.', hist: 'Live commentary', winW: 'White', winB: 'Black', rulesBtn: 'View rules',
     rulesTitle: 'How to play quantum chess', rulesClose: 'Close',
     endGame: 'End game', endSure: 'Sure? Tap again to end the game',
     thTitle: 'Thanks for playing!',
@@ -225,7 +337,8 @@ const T = {
           playing: 'Game on! Play on the tablet.', game_over: 'Game over.', stopped: 'Game stopped.',
           bad_pin: 'Wrong code. Check the number on the screen.', busy: 'A game is already running.',
           need_pin: 'Type the 4-digit code shown on the screen.', offline: 'No connection to the game.',
-          restart: 'Press Restart on the tablet to begin.' }
+          restart: 'Press Restart on the tablet to begin.',
+          setup: 'The station is getting ready. Try again in a moment.' }
   }
 };
 const params = new URLSearchParams(location.search);
@@ -240,25 +353,28 @@ let myGid = '', hist = [];
 try { myGid = localStorage.getItem('qchess-gid:' + (topic || 'local')) || ''; } catch (e) { }
 function setGid(gid) {
   if (!gid || gid === myGid) return;
-  myGid = gid; hist = []; renderHist();
+  myGid = gid; hist = []; seen = 0; renderHist();
   try { localStorage.setItem('qchess-gid:' + (topic || 'local'), gid); } catch (e) { }
 }
 function addHist(seq, entries) {
   entries.forEach((e, i) => { const k = seq + i; if (k >= hist.length) hist.push(e); });
   renderHist();
 }
+let seen = 0;
 function renderHist() {
   const L = T[sel.lang];
-  $('t-hist').textContent = L.hist;
+  $('t-hist').textContent = L.hist; $('hist-note').textContent = L.histNote;
   $('hist-box').classList.toggle('hidden', !hist.length);
-  $('hist').innerHTML = hist.slice().reverse().map(e => {
+  if (!hist.length) { $('hist').innerHTML = `<div class="ev empty">${L.histEmpty}</div>`; return; }
+  const fresh = hist.length - seen; seen = hist.length;
+  $('hist').innerHTML = hist.slice().reverse().map((e, i) => {
     let bar = '';
     if (typeof e.p === 'number') {
       const w = Math.round(e.p * 100);
       bar = `<div class="bar"><i style="width:${w}%"></i></div><small>${L.winW} ${w}% · ${L.winB} ${100 - w}%</small>`;
     }
     const esc = String(e.t || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
-    return `<div class="ev ${e.w || ''}"><b>${esc}</b>${e.h ? `<div>${e.h}</div>` : ''}${bar}</div>`;
+    return `<div class="ev ${e.w || ''} ${i < fresh && fresh < hist.length + 1 ? 'new' : ''}"><b>${esc}</b>${e.h ? `<div>${e.h}</div>` : ''}${bar}</div>`;
   }).join('');
 }
 const $ = id => document.getElementById(id);
@@ -284,7 +400,7 @@ function render() {
   $('open-rules').textContent = L.rulesBtn; $('rules-close').textContent = L.rulesClose;
   $('rules-title').textContent = L.rulesTitle;
   $('th-title').textContent = L.thTitle; $('th-text').innerHTML = L.thText; $('th-contact').textContent = L.thContact;
-  $('th-close').textContent = L.goClose; $('th-rules').textContent = L.rulesBtn;
+  $('th-close').textContent = L.close; $('th-rules').textContent = L.rulesBtn;
   $('endgame').textContent = endArmed ? L.endSure : L.endGame;
   $('version').textContent = 'Quantum Chess · Mostla · v' + VERSION;
   $('rules-body').innerHTML = L.rules.map(r => `<div class="card"><b>${r[0]}</b><span>${r[1]}</span></div>`).join('');
@@ -297,9 +413,10 @@ function goToTablet(color) {
   const L = T[sel.lang];
   $('go-text').textContent = color === 'black' ? L.goAi : L.goYou;
   $('go').classList.add('on');
+  howto($('go-demo'), sel.lang, 52);
 }
-$('go-close').onclick = () => { $('go').classList.remove('on'); $('hist-box').scrollIntoView({ behavior: 'smooth' }); };
-$('go-rules').onclick = () => { $('go').classList.remove('on'); $('rules').classList.add('on'); };
+$('go-close').onclick = () => { $('go').classList.remove('on'); $('go-demo').innerHTML = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); };
+$('go-rules').onclick = () => { $('go').classList.remove('on'); $('go-demo').innerHTML = ''; $('rules').classList.add('on'); };
 function showThanks() {
   $('go').classList.remove('on');
   $('thanks').classList.add('on');
@@ -324,11 +441,13 @@ function showState(key, cls, replay) {
   if (key === 'playing' && mine && lastState !== 'playing' && !replay) goToTablet(lastColor);
   if (mine && ['game_over', 'stopped'].includes(key) && !replay) showThanks();
   if (['waiting', 'game_over', 'stopped'].includes(key)) mine = false;
-  $('endgame').classList.toggle('hidden', !(mine && ['starting', 'restart', 'playing'].includes(key)));
+  const ingame = mine && ['starting', 'restart', 'playing'].includes(key);
+  $('endgame').classList.toggle('hidden', !ingame);
+  document.body.classList.toggle('ingame', ingame);
   lastState = key;
   const el = $('status'); el.textContent = T[sel.lang].st[key] || key;
   el.className = cls || (key === 'playing' ? 'ok' : ['starting', 'restart', 'sending'].includes(key) ? 'wait'
-    : ['bad_pin', 'busy', 'offline'].includes(key) ? 'bad' : '');
+    : ['bad_pin', 'busy', 'offline', 'setup'].includes(key) ? 'bad' : '');
   $('start').disabled = ['sending', 'starting', 'restart', 'playing'].includes(key);
 }
 
